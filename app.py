@@ -7,13 +7,13 @@ st.set_page_config(page_title="CS - Dashboard Sucesso do Cliente", layout="wide"
 st.title("📊 Dashboard CS | Evasão, Engajamento & Proatividade")
 
 # ==============================
-# 🔗 LINKS DAS PLANILHAS (CSV)
+# 🔗 LINKS CSV CORRETOS
 # ==============================
 
-url_2faltas = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/edit?usp=sharing"
-url_m1 = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/edit?usp=sharing"
-url_desistentes = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/edit?usp=sharing"
-url_recuperacao = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/edit?usp=sharing"
+url_2faltas = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/export?format=csv&gid=55844215"
+url_m1 = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/export?format=csv&gid=1769040659"
+url_desistentes = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/export?format=csv&gid=146646633"
+url_recuperacao = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1u0887U5T4DmgSj_HM7_AhM/export?format=csv&gid=930693728"
 
 # ==============================
 # 🔄 CARREGAMENTO DOS DADOS
@@ -21,21 +21,20 @@ url_recuperacao = "https://docs.google.com/spreadsheets/d/1i1IRwad7fpzOmBuY5Ntx1
 
 @st.cache_data(ttl=60)
 def load_data():
-    df_2faltas = pd.read_csv(url_2faltas)
-    df_m1 = pd.read_csv(url_m1)
-    df_desistentes = pd.read_csv(url_desistentes)
-    df_recuperacao = pd.read_csv(url_recuperacao)
+    df_2faltas = pd.read_csv(url_2faltas, sep=None, engine="python")
+    df_m1 = pd.read_csv(url_m1, sep=None, engine="python")
+    df_desistentes = pd.read_csv(url_desistentes, sep=None, engine="python")
+    df_recuperacao = pd.read_csv(url_recuperacao, sep=None, engine="python")
     return df_2faltas, df_m1, df_desistentes, df_recuperacao
 
 df_2faltas, df_m1, df_desistentes, df_recuperacao = load_data()
 
 # ==============================
-# 🔗 MERGE DAS BASES (Contrato)
+# 🔗 MERGE POR CONTRATO
 # ==============================
 
 df = df_2faltas.copy()
 
-# Junta Responsabilidade
 if "Contrato" in df.columns and "Contrato" in df_m1.columns:
     df = df.merge(
         df_m1[["Contrato", "Responsabilidade"]],
@@ -43,7 +42,6 @@ if "Contrato" in df.columns and "Contrato" in df_m1.columns:
         how="left"
     )
 
-# Criar status de evasão / recuperação
 df_desistentes["Status"] = "Desistente"
 df_recuperacao["Status"] = "Recuperado"
 
@@ -57,31 +55,28 @@ df = df.merge(df_status, on="Contrato", how="left")
 df["Status"] = df["Status"].fillna("Em Risco")
 
 # ==============================
-# 🎛 FILTROS LATERAIS
+# 🎛 FILTROS
 # ==============================
 
 st.sidebar.header("Filtros")
 
-# Filtro Mês
 if "Mes" in df.columns:
     mes = st.sidebar.selectbox("Filtrar por Mês", ["Todos"] + list(df["Mes"].dropna().unique()))
     if mes != "Todos":
         df = df[df["Mes"] == mes]
 
-# Filtro Histórico
 if "Historico" in df.columns:
     hist = st.sidebar.selectbox("Histórico", ["Todos"] + list(df["Historico"].dropna().unique()))
     if hist != "Todos":
         df = df[df["Historico"] == hist]
 
-# Filtro Resposta
 if "Resposta" in df.columns:
     resp = st.sidebar.selectbox("Resposta", ["Todos"] + list(df["Resposta"].dropna().unique()))
     if resp != "Todos":
         df = df[df["Resposta"] == resp]
 
 # ==============================
-# 📊 KPIs PRINCIPAIS
+# 📊 KPIs
 # ==============================
 
 total_alunos = len(df)
@@ -93,18 +88,17 @@ else:
     responderam = 0
     taxa_resposta = 0
 
-total_desistentes = df[df["Status"] == "Desistente"].shape[0]
 total_recuperados = df[df["Status"] == "Recuperado"].shape[0]
 
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Total Alunos", total_alunos)
 col2.metric("Responderam", responderam)
-col3.metric("Taxa Resposta", f"{taxa_resposta:.1f}%")
+col3.metric("Taxa Resposta (%)", f"{taxa_resposta:.1f}%")
 col4.metric("Recuperados", total_recuperados)
 
 # ==============================
-# 📈 GRÁFICO PERFORMANCE RESPONSÁVEL
+# 📈 PERFORMANCE RESPONSÁVEL
 # ==============================
 
 if "Responsabilidade" in df.columns and "Resposta" in df.columns:
@@ -125,7 +119,7 @@ if "Responsabilidade" in df.columns and "Resposta" in df.columns:
     st.plotly_chart(fig, use_container_width=True)
 
 # ==============================
-# 🥧 GRÁFICO ENGAJAMENTO
+# 🥧 ENGAJAMENTO
 # ==============================
 
 if "Grupo" in df.columns:
@@ -138,8 +132,8 @@ if "Grupo" in df.columns:
     st.plotly_chart(fig2, use_container_width=True)
 
 # ==============================
-# 📋 TABELA DETALHADA
+# 📋 TABELA
 # ==============================
 
-st.subheader("📄 Base Detalhada")
+st.subheader("Base Completa")
 st.dataframe(df, use_container_width=True)
